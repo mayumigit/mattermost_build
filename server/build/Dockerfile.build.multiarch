@@ -47,11 +47,6 @@ FROM gcr.io/distroless/base-debian12
 ARG PUID=2000
 ARG PGID=2000
 
-# Create mattermost user and group
-# We use a RUN command with useradd/groupadd that works in distroless
-# hadolint ignore=DL3002
-RUN groupadd --gid ${PGID} mattermost \
-  && useradd --uid ${PUID} --gid ${PGID} --comment "" --home-dir /mattermost mattermost
 
 # Create PostgreSQL client SSL directory structure for ssl_mode=require
 RUN mkdir -p /mattermost/.postgresql \
