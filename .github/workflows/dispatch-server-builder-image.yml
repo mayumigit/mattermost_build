@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #5.0.0
         with:
           ref: ${{ github.event.inputs.branch }}
 
@@ -69,11 +69,11 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - uses: chainguard-dev/setup-chainctl@f4ed65b781b048c44d4f033ae854c025c5531c19 # v0.3.2
+      - uses: chainguard-dev/setup-chainctl@be0acd273acf04bfdf91f51198327e719f6af978 # v0.4.0
         with:
           identity: ${{ env.CHAINCTL_IDENTITY }}
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #5.0.0
         with:
           ref: ${{ github.event.inputs.branch }}
 
