@@ -37,6 +37,13 @@ RUN apt-get update \
   tzdata \
   && rm -rf /var/lib/apt/lists/*
 
+# Pre-create and permission the postgresql directory
+ARG PUID=2000
+ARG PGID=2000
+RUN mkdir -p /mattermost/.postgresql \
+    && chown -R ${PUID}:${PGID} /mattermost/.postgresql \
+    && chmod 700 /mattermost/.postgresql
+
 # ---
 
 # Final Stage: Runtime Image
@@ -48,10 +55,8 @@ ARG PUID=2000
 ARG PGID=2000
 
 
-# Create PostgreSQL client SSL directory structure for ssl_mode=require
-RUN mkdir -p /mattermost/.postgresql \
-  && chown -R ${PUID}:${PGID} /mattermost/.postgresql \
-  && chmod 700 /mattermost/.postgresql
+# Copy the pre-created postgresql directory
+COPY --from=asset-builder --chown=${PUID}:${PGID} /mattermost/.postgresql /mattermost/.postgresql
 
 # Some ENV variables
 ENV PATH="/mattermost/bin:${PATH}"
