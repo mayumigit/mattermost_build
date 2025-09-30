@@ -1,0 +1,118 @@
+# Stage 1: Source Builder
+# This stage checks out the correct version of the source code and builds the binaries.
+FROM golang:1.24 AS source-builder
+
+# Install build tools
+RUN apt-get update && apt-get install -y make git
+
+# Copy the source code from the local directory
+COPY . /mattermost
+WORKDIR /mattermost
+
+# Create the bin directory
+RUN mkdir -p /mattermost/bin
+
+# Build the binaries for the target architecture
+ARG TARGETARCH
+RUN make -C server build-linux-${TARGETARCH}
+
+# ---
+
+# Stage 2: Asset Builder
+# This stage prepares the non-Go runtime dependencies.
+FROM ubuntu:noble-20250415.1@sha256:dc17125eaac86538c57da886e494a34489122fb6a3ebb6411153d742594c2ddc AS asset-builder
+
+# Install needed packages and indirect dependencies
+RUN apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+  ca-certificates \
+  media-types \
+  mailcap \
+  unrtf \
+  wv \
+  poppler-utils \
+  tidy \
+  tzdata \
+  && rm -rf /var/lib/apt/lists/*
+
+# Pre-create and permission directories
+ARG PUID=2000
+ARG PGID=2000
+RUN mkdir -p /mattermost/.postgresql /mattermost/data /mattermost/plugins /mattermost/client/plugins /mattermost/logs /mattermost/config /mattermost/bleve-indexes && \
+    chown -R ${PUID}:${PGID} /mattermost/.postgresql /mattermost/data /mattermost/plugins /mattermost/client/plugins /mattermost/logs /mattermost/config /mattermost/bleve-indexes && \
+    chmod 700 /mattermost/.postgresql
+
+# ---
+
+# Final Stage: Runtime Image
+# This stage assembles the final, minimal runtime image.
+FROM gcr.io/distroless/base-debian12
+
+# Build Arguments for user/group IDs
+ARG PUID=2000
+ARG PGID=2000
+
+# Copy the pre-created directories
+COPY --from=asset-builder --chown=${PUID}:${PGID} /mattermost/.postgresql /mattermost/.postgresql
+COPY --from=asset-builder --chown=${PUID}:${PGID} /mattermost/data /mattermost/data
+COPY --from=asset-builder --chown=${PUID}:${PGID} /mattermost/plugins /mattermost/plugins
+COPY --from=asset-builder --chown=${PUID}:${PGID} /mattermost/client/plugins /mattermost/client/plugins
+COPY --from=asset-builder --chown=${PUID}:${PGID} /mattermost/logs /mattermost/logs
+COPY --from=asset-builder --chown=${PUID}:${PGID} /mattermost/config /mattermost/config
+COPY --from=asset-builder --chown=${PUID}:${PGID} /mattermost/bleve-indexes /mattermost/bleve-indexes
+
+# Some ENV variables
+ENV PATH="/mattermost/bin:${PATH}"
+ENV MM_SERVICESETTINGS_ENABLELOCALMODE="true"
+
+# Copy over metadata files needed by runtime
+COPY --from=asset-builder /etc/mime.types /etc
+
+# Copy CA certificates for SSL/TLS validation with proper ownership
+COPY --from=asset-builder --chown=${PUID}:${PGID} /etc/ssl/certs /etc/ssl/certs
+
+# Copy document processing utilities and necessary support files
+COPY --from=asset-builder /usr/bin/pdftotext /usr/bin/pdftotext
+COPY --from=asset-builder /usr/bin/wvText /usr/bin/wvText
+COPY --from=asset-builder /usr/bin/wvWare /usr/bin/wvWare
+COPY --from=asset-builder /usr/bin/unrtf /usr/bin/unrtf
+COPY --from=asset-builder /usr/bin/tidy /usr/bin/tidy
+COPY --from=asset-builder /usr/share/wv /usr/share/wv
+
+# Copy necessary libraries for document processing utilities
+COPY --from=asset-builder /usr/lib/libpoppler.so* /usr/lib/
+COPY --from=asset-builder /usr/lib/libfreetype.so* /usr/lib/
+COPY --from=asset-builder /usr/lib/libpng.so* /usr/lib/
+COPY --from=asset-builder /usr/lib/libwv.so* /usr/lib/
+COPY --from=asset-builder /usr/lib/libtidy.so* /usr/lib/
+COPY --from=asset-builder /usr/lib/libfontconfig.so* /usr/lib/
+
+# Copy assets from the source builder
+COPY --from=source-builder /mattermost/config/ /mattermost/config/
+COPY --from=source-builder /mattermost/templates/ /mattermost/templates/
+COPY --from=source-builder /mattermost/i18n/ /mattermost/i18n/
+COPY --from=source-builder /mattermost/fonts/ /mattermost/fonts/
+COPY --from=source-builder /mattermost/client/ /mattermost/client/
+
+# Copy the compiled binaries from the source builder
+COPY --from=source-builder /mattermost/bin/mattermost /mattermost/bin/mattermost
+COPY --from=source-builder /mattermost/bin/mmctl /mattermost/bin/mmctl
+
+# Copy passwd including mattermost user
+COPY server/build/passwd /etc/passwd
+
+# We should refrain from running as privileged user
+USER mattermost
+
+# Healthcheck to make sure container is ready
+HEALTHCHECK --interval=30s --timeout=10s \
+  CMD ["/mattermost/bin/mmctl", "system", "status", "--local"]
+
+# Configure entrypoint and command with proper permissions
+WORKDIR /mattermost
+CMD ["/mattermost/bin/mattermost"]
+
+EXPOSE 8065 8067 8074 8075
+
+# Declare volumes for mount point directories
+VOLUME ["/mattermost/data", "/mattermost/logs", "/mattermost/config", "/mattermost/plugins", "/mattermost/client/plugins"]
