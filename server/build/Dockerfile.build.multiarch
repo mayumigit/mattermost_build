@@ -44,6 +44,9 @@ RUN mkdir -p /mattermost/.postgresql \
     && chown -R ${PUID}:${PGID} /mattermost/.postgresql \
     && chmod 700 /mattermost/.postgresql
 
+RUN mkdir -p /mattermost/data /mattermost/plugins /mattermost/client/plugins /mattermost/logs /mattermost/config /mattermost/bleve-indexes && \
+    chown -R ${PUID}:${PGID} /mattermost/data /mattermost/plugins /mattermost/client/plugins /mattermost/logs /mattermost/config /mattermost/bleve-indexes
+
 # ---
 
 # Final Stage: Runtime Image
@@ -85,7 +88,12 @@ COPY --from=asset-builder /usr/lib/libtidy.so* /usr/lib/
 COPY --from=asset-builder /usr/lib/libfontconfig.so* /usr/lib/
 
 # Create directories and copy assets from the source builder
-RUN mkdir -p /mattermost/data /mattermost/plugins /mattermost/client/plugins /mattermost/logs /mattermost/config
+COPY --from=asset-builder --chown=${PUID}:${PGID} /mattermost/data /mattermost/data
+COPY --from=asset-builder --chown=${PUID}:${PGID} /mattermost/plugins /mattermost/plugins
+COPY --from=asset-builder --chown=${PUID}:${PGID} /mattermost/client/plugins /mattermost/client/plugins
+COPY --from=asset-builder --chown=${PUID}:${PGID} /mattermost/logs /mattermost/logs
+COPY --from=asset-builder --chown=${PUID}:${PGID} /mattermost/config /mattermost/config
+COPY --from=asset-builder --chown=${PUID}:${PGID} /mattermost/bleve-indexes /mattermost/bleve-indexes
 COPY --from=source-builder --chown=${PUID}:${PGID} /mattermost/config/ /mattermost/config/
 COPY --from=source-builder --chown=${PUID}:${PGID} /mattermost/templates/ /mattermost/templates/
 COPY --from=source-builder --chown=${PUID}:${PGID} /mattermost/i18n/ /mattermost/i18n/
@@ -100,7 +108,7 @@ COPY --from=source-builder --chown=${PUID}:${PGID} /mattermost/bin/mmctl /matter
 COPY server/build/passwd /etc/passwd
 
 # Set ownership for all mattermost directories
-RUN chown -R ${PUID}:${PGID} /mattermost
+
 
 # We should refrain from running as privileged user
 USER mattermost
