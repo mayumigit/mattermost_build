@@ -9,9 +9,7 @@ RUN apt-get update && apt-get install -y make git
 COPY . /mattermost
 WORKDIR /mattermost
 
-# Checkout the specific version we want to build
-# Using -f to force checkout and discard any local changes.
-RUN git checkout -f v9.7.1
+
 
 # Build the binaries for the target architecture
 ARG TARGETARCH
