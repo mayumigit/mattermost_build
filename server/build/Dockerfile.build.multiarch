@@ -1,6 +1,6 @@
 # Stage 1: Source Builder
 # This stage checks out the correct version of the source code and builds the binaries.
-FROM golang:1.24 AS source-builder
+FROM golang:1.22 AS source-builder
 
 # Install build tools
 RUN apt-get update && apt-get install -y make git
@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y make git
 COPY . /mattermost
 WORKDIR /mattermost
 
-
+RUN mkdir -p /mattermost/bin
 
 # Build the binaries for the target architecture
 ARG TARGETARCH
