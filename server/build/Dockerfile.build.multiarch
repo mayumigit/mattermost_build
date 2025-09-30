@@ -19,7 +19,7 @@ RUN mkdir -p /mattermost/bin
 
 # Build the binaries for the target architecture
 ARG TARGETARCH
-RUN make -C server build-linux-${TARGETARCH}
+RUN make -C server BUILD_ENTERPRISE=false build-linux-${TARGETARCH}
 
 # ---
 
