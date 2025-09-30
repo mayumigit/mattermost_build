@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y make git
 COPY . /mattermost
 WORKDIR /mattermost
 
+# Tidy the go modules
+RUN go mod tidy
+
 # Create the bin directory
 RUN mkdir -p /mattermost/bin
 
