@@ -14,7 +14,7 @@ WORKDIR /mattermost
 # Build the binaries for the target architecture
 ARG TARGETARCH
 # The Makefile uses 'build-linux-amd64' or 'build-linux-arm64'
-RUN make build-linux-${TARGETARCH}
+RUN make -C server build-linux-${TARGETARCH}
 
 # ---
 
