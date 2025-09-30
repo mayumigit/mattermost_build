@@ -97,7 +97,7 @@ COPY --from=source-builder --chown=${PUID}:${PGID} /mattermost/bin/mattermost /m
 COPY --from=source-builder --chown=${PUID}:${PGID} /mattermost/bin/mmctl /mattermost/bin/mmctl
 
 # Copy passwd including mattermost user from the original build context
-COPY passwd /etc/passwd
+COPY server/build/passwd /etc/passwd
 
 # Set ownership for all mattermost directories
 RUN chown -R ${PUID}:${PGID} /mattermost
