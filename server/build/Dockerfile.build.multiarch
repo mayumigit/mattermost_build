@@ -10,7 +10,9 @@ COPY . /mattermost
 WORKDIR /mattermost
 
 # Tidy the go modules
+WORKDIR /mattermost/server
 RUN go mod tidy
+WORKDIR /mattermost
 
 # Create the bin directory
 RUN mkdir -p /mattermost/bin
